@@ -14,7 +14,7 @@ async function fetchElections() {
         data.forEach(election => {
           const electionCard = document.createElement('div');
           electionCard.classList.add('election-card');
-          electionCard.innerHTML = `
+    electionCard.innerHTML = `
   <h2>${election.electionName}</h2>
   <p><strong>Type:</strong> ${election.electionType}</p>
   <p><strong>Start Date:</strong> ${election.startDate}</p>
@@ -26,9 +26,13 @@ async function fetchElections() {
     ${election.candidates.map(candidate => `
       <li>${candidate.candidateName} - ${candidate.partyName}</li>`).join('')}
   </ul>
-    <button class="vote-now-btn" onclick="startFaceRecognition('${election._id}')">Vote Now</button>
+
+  ${
+    election.status === 'Ongoing' 
+      ? `<button class="vote-now-btn" onclick="startFaceRecognition('${election._id}')">Vote Now</button>` 
+      : `<span style="color: black; font-weight: bold;">Upcoming</span>`
+  }
 `;
-//${election.status === 'Ongoing' ? `<button onclick="voteNow('${election._id}')">Vote Now</button>` : `<span style="color: black; font-weight: bold;">Upcoming</span>`}
 const toggleBtn = electionCard.querySelector('.toggle-btn');
 const candidateList = electionCard.querySelector('.candidate-list');
 
