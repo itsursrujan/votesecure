@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('./models/User');
@@ -18,14 +19,24 @@ app.use(cors({ origin: 'http://localhost:5000' }));
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use('/images/uploads', express.static(path.join(__dirname, 'uploads')));
+// Add a simple logger to see what's happening
+app.use((req, res, next) => {
+  console.log(`${req.method} request for ${req.url}`);
+  next();
+});
+
+// Root Route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'home.html'));
+});
 
 
 // MongoDB Connection
-mongoose.connect('mongodb://localhost:27017/votingSystemuser', {
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => console.log("MongoDB connected"))
-  .catch(err => console.error(err));
+}).then(() => console.log("✅ MongoDB connected successfully"))
+  .catch(err => console.error("❌ MongoDB connection error:", err));
 
 //USER SERVER
 // Signup Route
@@ -54,53 +65,53 @@ app.post('/signup', async (req, res) => {
 
 // Login Route
 app.post('/login', async (req, res) => {
-    const { voterId, password } = req.body;
-  
-    try {
-      // Check if user exists
-      const user = await User.findOne({ voterId });
-  
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      // Validate Password (assuming plain text password, no hashing)
-      if (user.password !== password) {
-        return res.status(400).json({ error: 'Invalid password' });
-      }
-  
-      res.status(200).json({ message: 'Login successful!', user });
-    } catch (error) {
-      res.status(500).json({ error: 'Server error' });
+  const { voterId, password } = req.body;
+
+  try {
+    // Check if user exists
+    const user = await User.findOne({ voterId });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  });
+
+    // Validate Password (assuming plain text password, no hashing)
+    if (user.password !== password) {
+      return res.status(400).json({ error: 'Invalid password' });
+    }
+
+    res.status(200).json({ message: 'Login successful!', user });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 //FORGOT PASSWORD SERVER
-  // Forgot Password Route
-  app.post('/forgot-password', async (req, res) => {
-    const { voterId, newPassword } = req.body;
-  
-    try {
-      const user = await User.findOne({ voterId });
-  
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      // Update password (No hashing as per your requirement)
-      user.password = newPassword;
-      await user.save();
-  
-      res.status(200).json({ message: 'Password reset successful. You can now log in.' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'An error occurred. Please try again.' });
+// Forgot Password Route
+app.post('/forgot-password', async (req, res) => {
+  const { voterId, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ voterId });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  });
-  
-  // 🟢 Serve Forgot Password Page
-  app.get('/forgot-password', (req, res) => {
-    res.sendFile(path.join(__dirname, 'forgot-password.html'));
-  });
+
+    // Update password (No hashing as per your requirement)
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful. You can now log in.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+});
+
+// 🟢 Serve Forgot Password Page
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'forgot-password.html'));
+});
 
 
 // check face registered
@@ -121,7 +132,7 @@ app.get('/check-face/:userId', async (req, res) => {
 
 
 // Validation function
-const isValidName = (name) => /^[A-Za-z]+$/.test(name); 
+const isValidName = (name) => /^[A-Za-z]+$/.test(name);
 
 //ADMIN SERVER
 
@@ -131,7 +142,7 @@ app.post('/admin/signin', async (req, res) => {
 
   if (!isValidName(name)) {
     return res.status(400).json({ error: "Name must contain only alphabetic characters" });
-  } 
+  }
   // Validate ECI ID and Aadhar ID
   const eciRegex = /^[A-Za-z]{4}\d{6}$/;
   const aadharRegex = /^\d{10}$/;
@@ -167,7 +178,7 @@ app.post('/admin/login', async (req, res) => {
 
   try {
     // Check if user exists
-    const admin = await Admin.findOne({eciId });
+    const admin = await Admin.findOne({ eciId });
 
     if (!admin) {
       return res.status(404).json({ error: 'User not found' });
@@ -206,7 +217,7 @@ const upload = multer({ storage });
 
 app.post('/add-candidate', upload.single('partySymbol'), async (req, res) => {
   const { candidateName, partyName, age, candidateId } = req.body;
-  
+
   // Check if all fields are filled
   if (!candidateName || !partyName || !age || !candidateId || !req.file) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -538,7 +549,7 @@ app.get('/results', async (req, res) => {
           voteMap[vote.candidateId.toString()] = (voteMap[vote.candidateId.toString()] || 0) + 1;
         }
       });
-      
+
       // Prepare candidate list with vote count
       const candidatesWithVotes = election.candidates.map(c => {
         return {
@@ -570,6 +581,7 @@ app.get('/results', async (req, res) => {
   }
 });
 // Server Listening
-app.listen(3000, 'localhost', () => {
-  console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on http://0.0.0.0:${PORT}`);
 });

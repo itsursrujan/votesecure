@@ -46,10 +46,10 @@ video.addEventListener('play', async () => {
 
     if (result.success){
       alert("✅ Face verified! You may proceed to vote.");
-      window.location.href = `http://localhost:3000/vote.html?voterId=${voterId}&electionId=${electionId}`;
+      window.location.href = `http://localhost:3001/vote.html?voterId=${voterId}&electionId=${electionId}`;
     }else {
       alert(`❌ Verification failed: ${result.message}`);
-      window.location.href = 'http://localhost:3000/ongoing-elections.html';
+      window.location.href = 'http://localhost:3001/ongoing-elections.html';
     }
   }, 3000);
 });
